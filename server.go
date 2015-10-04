@@ -19,13 +19,18 @@ type User struct {
 }
 
 type Context struct {
-	Token      string
-	UserInfo   map[string]interface{}
+	Token    string
+	UserInfo map[string]interface{}
 }
 
 func (c *Context) UserRequired(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
 	var userInfo map[string]interface{}
 	if req.URL.Path == "/healthcheck" {
+		next(rw, req)
+		return
+	}
+
+	if req.URL.Path == "/signup" {
 		next(rw, req)
 		return
 	}
@@ -81,14 +86,19 @@ func (c *Context) Healthcheck(rw web.ResponseWriter, req *web.Request) {
 	fmt.Fprintf(rw, "{\"online\": true}")
 }
 
+func (c *Context) RedirectOauth(rw web.ResponseWriter, req *web.Request) {
+	rw.Header().Set("Location", "https://oauth.crossy.io/?callbackUrl=https://info.crossy.io/oauth/callback")
+	rw.WriteHeader(http.StatusFound)
+}
+
 func main() {
 	router := web.New(Context{}). // Create your router
 					Middleware(web.LoggerMiddleware).     // Use some included middleware
 					Middleware(web.ShowErrorsMiddleware). // ...
 					Middleware((*Context).UserRequired).
-		// Middleware((*Context).SetHelloCount). // Your own middleware!
-		Get("/healthcheck", (*Context).Healthcheck).
-		Get("/api/v1/users/:uuid", (*Context).GetUserInfo) // Add a route
+					Get("/healthcheck", (*Context).Healthcheck).
+					Get("/api/v1/users/:uuid", (*Context).GetUserInfo). // Add a route
+					Get("/signup", (*Context).RedirectOauth)            // Add a route
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "80"
