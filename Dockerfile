@@ -1,4 +1,4 @@
-FROM golang:1.4
+FROM golang:1.5
 MAINTAINER Crossy.IO <docker@crossy.io>
 EXPOSE 80
 
